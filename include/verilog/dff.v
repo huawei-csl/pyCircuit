@@ -147,10 +147,17 @@ module dff #(
     end endgenerate
 `else
     // Hardware retains physical-edge operation and complete-update permission.
+    // next_q() written out rather than called: yosys leaves a function result
+    // assigned inside a clocked process undriven after `proc`, so `check`
+    // reports every register bit and the update is not provably the one above.
     assign pyc_local_error = 1'b0;
     always @(posedge clk) begin
-        if (pyc_root_commit_ok === 1'b1)
-            q_current <= next_q(q_current, 1'b1, rst, 1'b1, d, init);
+        if (pyc_root_commit_ok) begin
+            if (rst)
+                q_current <= init;
+            else
+                q_current <= d;
+        end
     end
 `endif
 endmodule

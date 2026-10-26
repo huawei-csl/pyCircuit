@@ -16,7 +16,13 @@ module byte_mem #(
     input  wire T wdata,
     input  wire [$bits(T)/8-1:0] wstrb,
     input  wire [2:0] pyc_phase,
+`ifdef SYNTHESIS
+    // yosys (native and slang) has no tri1 net; every generated instance
+    // connects this pin, so the pull-up only matters to simulators.
+    input  wire pyc_root_commit_ok,
+`else
     input  tri1 pyc_root_commit_ok,
+`endif
     output wire pyc_local_error
 );
     // Internal declarations. Each lane has one candidate, not a memory copy.

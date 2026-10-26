@@ -17,7 +17,13 @@ module fifo #(
     output wire T out_data,
     output wire local_capacity,
     input wire [2:0] pyc_phase,
+`ifdef SYNTHESIS
+    // yosys (native and slang) has no tri1 net; every generated instance
+    // connects this pin, so the pull-up only matters to simulators.
+    input  wire pyc_root_commit_ok,
+`else
     input tri1 pyc_root_commit_ok,
+`endif
     output wire pyc_local_error
 );
     localparam int unsigned PAYLOAD_BITS = $bits(T);

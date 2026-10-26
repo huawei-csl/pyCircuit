@@ -1,0 +1,4 @@
+# Several guarded writes to one state variable in one Rule: one storage leaf,
+# one driver per RTL net, and later-write-wins sequential semantics in native
+# C++ (workers 1/2) and physical RTL; yosys `check -assert` when available.
+# RUN: %python %S/Inputs/rule-sequential-writes.py --repo %src --source-compiler %pycircuit_source_unit --linker %pycircuit_link --emitter %pycircuit_emit --cxx %cxx --scratch %t.dir

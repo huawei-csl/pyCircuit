@@ -2,6 +2,7 @@
 #include "HardwareEmitCommon.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
 using namespace mlir;
 namespace acir::compiler {
@@ -11,6 +12,17 @@ public:
   NetEmitter(HardwareEmitContext &context, ac::ModuleOp definition,
              raw_ostream &out)
       : context(context), definition(definition), out(out) {}
+  // Every whole net this module drives is recorded here. A continuous
+  // `assign` or child output pin is a driver, not a statement: a second
+  // driver on one net has no defined value in Verilog, while the C++ target
+  // would apply both in order. Verified IR names one producer per value, so
+  // a second driver is an emitter defect; refuse it instead of writing it.
+  LogicalResult drive(StringRef net, Operation *site) {
+    if (drivenNets.insert(net).second)
+      return success();
+    return site->emitOpError()
+           << "RTL net '" << net << "' would have more than one driver";
+  }
   FailureOr<std::string> physicalInitializer(Value value, unsigned depth = 0) {
     auto known = initializers.find(value);
     if (known != initializers.end())
@@ -568,6 +580,8 @@ public:
       expression = operands[0] + "." + *name;
     } else
       return op->emitOpError() << "operation lacks RTL hardware emission";
+    if (failed(drive(name, op)))
+      return failure();
     out << "  " << (combinationalDivRem ? "always_comb " : "assign ") << name
         << " = " << expression << ";\n";
     return name;
@@ -932,7 +946,7 @@ public:
         }
         for (auto output : queue->getResults()) {
           auto value = net(output);
-          if (failed(value))
+          if (failed(value) || failed(drive(*value, queue)))
             return failure();
           pins.push_back(*value);
         }
@@ -1016,7 +1030,7 @@ public:
       }
       for (auto output : occurrence->getResults()) {
         auto value = net(output);
-        if (failed(value))
+        if (failed(value) || failed(drive(*value, occurrence)))
           return failure();
         outputs.push_back(*value);
       }
@@ -1210,6 +1224,7 @@ private:
   llvm::DenseMap<Value, std::string> names;
   llvm::DenseMap<Value, std::string> initializers;
   llvm::DenseSet<Operation *> instances;
+  llvm::StringSet<> drivenNets;
   llvm::DenseMap<uint64_t, std::string> samplingNames;
   SmallVector<std::string> localErrors;
   SmallVector<std::string> localCompletions;
@@ -1302,7 +1317,7 @@ LogicalResult emitHardwareVerilogDefinition(HardwareEmitContext &context,
     auto id = legalizeIdentifier(
         cast<StringAttr>(definition.getOutputNames()[i]).getValue(),
         [&] { return definition.emitOpError(); });
-    if (failed(id))
+    if (failed(id) || failed(nets.drive(*id, definition)))
       return failure();
     out << "  assign " << *id << " = " << *wire << ";\n";
   }

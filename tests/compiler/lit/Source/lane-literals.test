@@ -1,0 +1,4 @@
+# Table literals with int and mixed lanes, and identity (full-width) slices,
+# including through a static width parameter: admission, rejection, native
+# workers 1/2 and physical RTL.
+# RUN: %python %S/Inputs/lane-literals.py --repo %src --source-compiler %pycircuit_source_unit --linker %pycircuit_link --emitter %pycircuit_emit --cxx %cxx --scratch %t.dir

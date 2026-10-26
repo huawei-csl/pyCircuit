@@ -695,6 +695,13 @@ HardwareAnalysis::verifyOccurrence(Operation *instance,
   if (failed(bindings))
     return failure();
   auto primitive = getPrimitiveKind(bindings->owner);
+  if (Attribute noReset = instance->getAttr("ac.no_reset")) {
+    if (!isa<UnitAttr>(noReset))
+      return instance->emitOpError() << "ac.no_reset requires a unit marker";
+    if (primitive != "dff" && primitive != "dffe")
+      return instance->emitOpError()
+             << "ac.no_reset applies only to DFF/DFFE storage leaves";
+  }
   if (!primitive.empty() && primitive != "fifo_local" &&
       primitive != "fifo_downstream_pop" &&
       isa_and_nonnull<TableType>(bindings->types.lookup("T")))

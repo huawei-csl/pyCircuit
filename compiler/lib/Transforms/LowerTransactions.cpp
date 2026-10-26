@@ -8349,6 +8349,8 @@ FailureOr<OwningOpRef<mlir::ModuleOp>> materializeHardwareState(
       leaf.addAttribute("type_arguments", attributes.getArrayAttr({TypeAttr::get(
           table ? table.getElementType() : state.getQ().getType())}));
       if (table) leaf.addAttribute("shape", table.getShape());
+      if (state->hasAttr("ac.no_reset"))
+        leaf.addAttribute("ac.no_reset", attributes.getUnitAttr());
       OpBuilder builder(state);
       // Establish Q first so a hold candidate or forward dependency is rebound
       // through ordinary SSA use replacement, without dangling copied Values.

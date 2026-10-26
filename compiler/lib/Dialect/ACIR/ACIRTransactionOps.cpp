@@ -809,6 +809,9 @@ LogicalResult SourceStateOp::verify() {
     return emitOpError() << "logical state is forbidden in a final package";
   if ((*this)->hasAttr("sym_name"))
     return emitOpError() << "state uses instance_name; sym_name is unsupported";
+  if (Attribute noReset = (*this)->getAttr("ac.no_reset");
+      noReset && !isa<UnitAttr>(noReset))
+    return emitOpError() << "ac.no_reset requires a unit marker";
   if (failed(namedDeclaration(*this, getInstanceNameAttr())))
     return failure();
   auto owner = cast<ModuleOp>((*this)->getParentOp());

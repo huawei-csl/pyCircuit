@@ -200,6 +200,56 @@ does not supply a separate register instance. This classification depends on
 the declaration, not on using a `uN` type name. Ordinary expression locals and
 module-result bindings remain value/wire connections.
 
+### State without a reset value
+
+The initializer of a module-scope declaration is its reset value: it drives the
+storage child's `init` pin, which a reset loads. A declaration without an
+initializer, `coeff: ac.u8`, therefore declares state that has no reset value
+and is not reset. Use it for storage that is always written before it is read,
+such as pipeline data, sample and coefficient registers, where a reset term in
+front of every data input would only cost timing:
+
+```python
+@ac.module
+def Tap(load: ac.u1, value: ac.u8, sample_in: ac.u8) -> ac.u8:
+    coeff: ac.u8        # no initializer: no reset
+    sample: ac.u8       # no initializer: no reset
+    valid: ac.u1 = 0    # initialized: reset to 0 as before
+
+    @ac.rule
+    def step() -> ac.u8:
+        product = coeff * sample if valid else 0
+        if load:
+            coeff = value
+        sample = sample_in
+        valid = 1
+        return product
+
+    return step
+```
+
+Such state lowers to the same DFF/DFFE storage child as any other declaration,
+with its `init` pin tied to an all-X constant and the leaf marked `ac.no_reset`.
+The domain reset stays connected, so domain identity and checks are unchanged;
+only its effect is removed. The semantics are the same in C++ and RTL:
+
+| Event | Initialized state `x: T = v` | State without initializer `x: T` |
+| --- | --- | --- |
+| After reset, before the first write | `v` | X (every payload bit unknown) |
+| Rising edge with reset asserted | Loads `v`; a write in that epoch is lost | Ignores reset: loads the written value when enabled, otherwise holds |
+| Host Reset (`Reset()` / managed reset phase) | Loads `v` | Retains its committed value, as Memory contents do |
+| Unknown reset at a rising edge under `strict` | Faults | Faults: the reset policy is unchanged, only its effect on this state is removed |
+
+An enable that is unknown at a rising edge faults as for any DFFE, including
+during reset. Physical-mode Verilog passes `.pyc_no_reset(1'b1)` to the
+primitive, so synthesis with `SYNTHESIS` defined infers a plain flop
+(for example yosys `$_DFF_P_`/`$_DFFE_PP_`, not `$_SDFF*`). Fixed Bits and
+Tables of fixed Bits are admitted. Boolean, bounded Integer, Enum and Struct
+declarations still require an initializer; a declaration without one reports
+`state declared without an initializer (no reset) requires a fixed-Bits or
+Table-of-fixed-Bits type`. Reading the state before its first write yields X,
+which four-state checks treat as any other unknown value.
+
 The [state-declaration authoring contract](../development/agent-frontend-guide.md#module-state-declarations-and-storage-children)
 requires finite storage representations beyond Bits. The common transaction
 path retains admitted Bits, Enum, Struct, Table, Boolean and bounded Integer

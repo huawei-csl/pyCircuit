@@ -1532,6 +1532,10 @@ HardwareEmitContext::cppBoundModuleType(Operation *definition,
     return failure();
   if (kernel && kind == "sync_mem_dp")
     actuals.push_back("2");
+  // A storage leaf declared without a reset value ignores reset.
+  if (kernel && (kind == "dff" || kind == "dffe") && site &&
+      site->hasAttr("ac.no_reset"))
+    actuals.push_back("true");
   return actuals.empty() ? name : name + "<" + join(actuals, ", ") + ">";
 }
 FailureOr<std::string>

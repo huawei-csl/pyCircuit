@@ -778,6 +778,10 @@ private:
       const Port &contract, const AstNode &initializer, const AstNode &site,
       OpBuilder &at, FlatSymbolRefAttr symbol, llvm::StringMap<Value> &values,
       llvm::StringMap<Instance *> &instances, bool allowCapturedConstants = false);
+  // A declaration without an initializer has no reset value: its storage
+  // leaf ignores reset and holds an all-X payload until its first write.
+  FailureOr<Value> noResetInitializer(const Port &contract, const AstNode &site,
+                                      OpBuilder &at, FlatSymbolRefAttr symbol);
 
   bool sameBindingBoundary(const BindingBoundary &a, const BindingBoundary &c);
   bool sameBindingContract(const BindingBoundary &a, const BindingBoundary &c);

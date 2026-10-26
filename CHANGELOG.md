@@ -6,6 +6,12 @@ published through the repository's release workflow.
 
 ## Unreleased
 
+- Admit module-scope state declared without an initializer (`coeff: ac.u8`)
+  as state with no reset value: it is X until written, ignores reset and keeps
+  its value across a host Reset. The storage leaf is marked `ac.no_reset`,
+  and physical RTL elaborates `dff`/`dffe` with `pyc_no_reset` so synthesis
+  infers flops without reset logic.
+
 ## 6.1.0 - 2026-09-21
 
 - Ship exactly one wheel per platform. The `pycircuit-hisi` platform wheel now

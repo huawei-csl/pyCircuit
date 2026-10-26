@@ -54,6 +54,12 @@ view: check `isFullyKnown()` before using it as known hardware data.
 | `sync_mem_dp` | Same | `rdata0`, `rdata1`, `wdata`: `wire<T>` |
 | `byte_mem` | Same | `rdata`, `wdata`: `wire<T>` |
 
+`dff_kernel<T, true>` and `dffe_kernel<T, true>` are the same registers without
+reset: a known-high reset at a rising edge does not load `init` (an enabled
+write still lands) and `reset()` retains the committed Q. An unknown reset at a
+rising edge still faults. The compiler selects them for state declared without
+an initializer.
+
 Clock, reset, enable and read/write controls use `wire<Bits<1>>`. Addresses
 use `wire<Bits<ADDR_WIDTH>>`. Strobes start at packed bit zero: synchronous
 memory uses ceil(payload width / 8), including a partial final byte;

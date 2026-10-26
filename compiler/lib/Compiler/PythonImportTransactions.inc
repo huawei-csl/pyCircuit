@@ -3065,7 +3065,9 @@ LogicalResult Importer::emitSourceTransactions(ModuleDecl &decl) {
           return error() << "table allocation requires exactly init";
         initializer = allocation.item("keywords", 0).child("value");
       }
-      if (target.kind() != "Name" || !initializer)
+      // `name: T` without a value declares state with no reset value.
+      bool noReset = !tableState && !initializer && target.kind() == "Name";
+      if (target.kind() != "Name" || (!initializer && !noReset))
         return error() << "typed owner state requires an annotated Name initializer";
       StringRef name = target.string("id");
       if (states.contains(name) || boundHardwareIdentity(name) ||
@@ -3076,12 +3078,14 @@ LogicalResult Importer::emitSourceTransactions(ModuleDecl &decl) {
       Port boundaryPort{name.str(), *type, annotation, annotationKind(annotation),
                         fixedAnnotation(annotation)};
       llvm::StringMap<Instance *> none;
-      if (initializer.kind() == "Name" &&
+      if (initializer && initializer.kind() == "Name" &&
           states.contains(initializer.string("id")))
         return error()
                << "persistent initializer must be a static complete value";
-      auto initial = stateInitializer(boundaryPort, initializer, statement,
-                                       at, decl.symbol, moduleValues, none, true);
+      auto initial =
+          noReset ? noResetInitializer(boundaryPort, statement, at, decl.symbol)
+                  : stateInitializer(boundaryPort, initializer, statement, at,
+                                     decl.symbol, moduleValues, none, true);
       if (failed(initial)) return failure();
       auto payloadConstraint = sourceConstraint(boundaryPort);
       if (failed(payloadConstraint)) return failure();
@@ -3092,6 +3096,7 @@ LogicalResult Importer::emitSourceTransactions(ModuleDecl &decl) {
           {at.getNamedAttr("instance_name", at.getStringAttr(name)),
            at.getNamedAttr("ac.payload_constraint", *payloadConstraint),
            at.getNamedAttr("occurrence", sourceOccurrence(at, decl.symbol, statement))});
+      if (noReset) state->setAttr("ac.no_reset", at.getUnitAttr());
       helperOwnerBindings.insert(name);
       states[name] = {name.str(), *type, *initial, state, statement};
       rememberState(state->getResult(0), states[name]);

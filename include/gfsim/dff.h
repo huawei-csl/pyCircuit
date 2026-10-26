@@ -11,8 +11,9 @@ namespace gfsim {
 
 // This is the sole register state transition implementation. Both scalar
 // modules and bulk owners pass plain state and borrowed pins to the same
-// kernel.
-template <class T = Bits<1>> struct dffe_kernel {
+// kernel. NoReset elaborates a register declared without a reset value: the
+// sampled reset never loads init and a host Reset retains the committed value.
+template <class T = Bits<1>, bool NoReset = false> struct dffe_kernel {
   struct Current {
     wire<T> q;
     bool clock = false;
@@ -43,13 +44,15 @@ template <class T = Bits<1>> struct dffe_kernel {
           evaluateSampledClock(current.clock, inputs.clk, inputs.rst);
       if (clock.fault == SampledClockFault::UnknownClock)
         throw FourStateViolation("dffe clock must be known");
+      // A register without reset still reports an unknown reset: the reset
+      // policy is the root's, only its effect on this register is removed.
       if (clock.fault == SampledClockFault::UnknownReset)
         throw FourStateViolation("dffe reset must be known at posedge");
       pending.clock = clock.nextClock;
       pending.valid = true;
       if (!clock.rising)
         return;
-      if (clock.resetActive) {
+      if (!NoReset && clock.resetActive) {
         pending.q = inputs.init;
         return;
       }
@@ -71,39 +74,41 @@ template <class T = Bits<1>> struct dffe_kernel {
     outputs.q = current.q;
     discard(current, pending);
   }
-  static void reset(const Current &, Inputs inputs, Pending &pending) noexcept {
-    pending.q = inputs.init;
+  static void reset(const Current &current, Inputs inputs,
+                    Pending &pending) noexcept {
+    pending.q = NoReset ? current.q : inputs.init;
     pending.clock = false;
     pending.valid = true;
   }
 };
 
-template <class T = Bits<1>> struct dff_kernel {
-  using Current = typename dffe_kernel<T>::Current;
-  using Pending = typename dffe_kernel<T>::Pending;
+template <class T = Bits<1>, bool NoReset = false> struct dff_kernel {
+  using Enabled = dffe_kernel<T, NoReset>;
+  using Current = typename Enabled::Current;
+  using Pending = typename Enabled::Pending;
   struct Inputs {
     const wire<Bits<1>> &clk, &rst;
     const wire<T> &d, &init;
   };
-  using Outputs = typename dffe_kernel<T>::Outputs;
+  using Outputs = typename Enabled::Outputs;
   static void discard(const Current &current, Pending &pending) noexcept {
-    dffe_kernel<T>::discard(current, pending);
+    Enabled::discard(current, pending);
   }
   static void work(const Current &current, Inputs inputs, Pending &pending,
                    Outputs outputs) {
     const auto enabled = wire<Bits<1>>::known(Bits<1>{1});
-    dffe_kernel<T>::work(
+    Enabled::work(
         current, {inputs.clk, inputs.rst, enabled, inputs.d, inputs.init},
         pending, outputs);
   }
   static void xfer(Current &current, Pending &pending,
                    Outputs outputs) noexcept {
-    dffe_kernel<T>::xfer(current, pending, outputs);
+    Enabled::xfer(current, pending, outputs);
   }
   static void reset(const Current &current, Inputs inputs,
                     Pending &pending) noexcept {
     const auto enabled = wire<Bits<1>>::known(Bits<1>{1});
-    dffe_kernel<T>::reset(
+    Enabled::reset(
         current, {inputs.clk, inputs.rst, enabled, inputs.d, inputs.init},
         pending);
   }

@@ -1076,6 +1076,20 @@ public:
                  << "physical primitive requires constant parameters";
         parameters->insert(close, ", .pyc_initial(" + selected + ") ");
       }
+      // A storage leaf declared without a reset value ignores reset; the
+      // primitive then elaborates with no reset term at all.
+      if ((kind == "dff" || kind == "dffe") &&
+          occurrence->hasAttr("ac.no_reset")) {
+        if (parameters->empty())
+          *parameters = " #( .pyc_no_reset(1'b1) )";
+        else {
+          auto close = parameters->rfind(')');
+          if (close == std::string::npos)
+            return occurrence->emitOpError()
+                   << "malformed RTL primitive parameter list";
+          parameters->insert(close, ", .pyc_no_reset(1'b1) ");
+        }
+      }
       std::string childError, childComplete, childSamplingError;
       if ((context.managesChecks() || context.isPhysical())) {
         childError = "pyc_child_error_" + std::to_string(localErrors.size());

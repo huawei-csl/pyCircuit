@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Packed-payload positive-edge register with synchronous active-high reset.
+// pyc_no_reset elaborates the same register without reset: rst is still
+// connected (it names the clock domain) but never loads init, and a host
+// Reset retains the committed value.
 module dffe #(
     parameter type T = logic [0:0],
     parameter bit pyc_managed = 0,
     parameter bit pyc_physical = 0,
+    parameter bit pyc_no_reset = 0,
     parameter T pyc_initial = 'x
 ) (
     // Interface: direction belongs to the wire port, not the payload.
@@ -49,7 +53,7 @@ module dffe #(
                                 input T data, input T initial_data);
         next_q = current_q;
         if (rising) begin
-            if (reset)
+            if (reset && !pyc_no_reset)
                 next_q = initial_data;
             else if (enabled)
                 next_q = data;
@@ -65,7 +69,7 @@ module dffe #(
         if (rising) begin
             if ($isunknown(reset))
                 edge_control_error[0] = 1'b1;
-            else if (!reset && $isunknown(enabled))
+            else if ((pyc_no_reset || !reset) && $isunknown(enabled))
                 edge_control_error[1] = 1'b1;
         end
     endfunction
@@ -136,7 +140,7 @@ module dffe #(
                     preparation_error = 1'b0;
                 end
                 3'd4: begin // RESET_PREPARE bypasses ordinary controls.
-                    q_pending = init;
+                    q_pending = pyc_no_reset ? q_current : init;
                     clock_pending = 1'b0;
                     preparation_error = 1'b0;
                     pending_valid = 1'b1;
@@ -172,7 +176,7 @@ module dffe #(
     assign pyc_local_error = 1'b0;
     always @(posedge clk) begin
         if (pyc_root_commit_ok) begin
-            if (rst)
+            if (rst && !pyc_no_reset)
                 q_current <= init;
             else if (en)
                 q_current <= d;

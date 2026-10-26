@@ -191,6 +191,8 @@ private:
     attributes.append("type_arguments", b.getArrayAttr({TypeAttr::get(
         table ? table.getElementType() : state.getQ().getType())}));
     if (table) attributes.append("shape", table.getShape());
+    if (state->hasAttr("ac.no_reset"))
+      attributes.append("ac.no_reset", b.getUnitAttr());
     SmallVector<Value> inputs{mapping.lookup(state.getClk()),
                               mapping.lookup(state.getRst())};
     if (!dff) inputs.push_back(mapping.lookup(update->getIntent()));

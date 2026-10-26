@@ -694,6 +694,46 @@ FailureOr<Value> Importer::stateInitializer(
   return *init;
 }
 
+FailureOr<Value> Importer::noResetInitializer(const Port &contract,
+                                              const AstNode &site,
+                                              OpBuilder &at,
+                                              FlatSymbolRefAttr symbol) {
+  ac::HardwareAnalysis analysis(*body);
+  auto table = dyn_cast<ac::TableType>(contract.type);
+  Type element = table ? table.getElementType() : contract.type;
+  if (!isa<ac::BitsType>(element) || (!table && !contract.fixedBits) ||
+      contract.sourceKind)
+    return error() << "state declared without an initializer (no reset) "
+                      "requires a fixed-Bits or Table-of-fixed-Bits type";
+  if (table && failed(analysis.getTableSize(
+                   table, {}, at.getInsertionBlock()->getParentOp())))
+    return failure();
+  auto width = analysis.getPackedWidth(element, {},
+                                       at.getInsertionBlock()->getParentOp());
+  if (failed(width)) return failure();
+  // The payload is unknown until first written: an all-X closed constant
+  // keeps the storage leaf's init pin typed and statically initialized.
+  Value unknown =
+      createOp(at, site.location(b.getContext(), source.path),
+               ac::BitsConstant4Op::getOperationName(), {},
+               TypeRange{internalBits(*width, site, symbol)},
+               {at.getNamedAttr("pattern",
+                                at.getStringAttr(std::string(*width, 'x')))})
+          ->getResult(0);
+  remember(unknown, std::nullopt);
+  fixedValues.insert(unknown);
+  BindingBoundary boundary{
+      {contract.name, element, contract.node, contract.sourceKind, true}, true};
+  auto init = applyBindingBoundary(unknown, boundary, site, at, symbol);
+  if (failed(init)) return failure();
+  if (!table) return *init;
+  return createOp(at, site.location(b.getContext(), source.path),
+                  ac::TableSplatOp::getOperationName(), {*init},
+                  TypeRange{contract.type},
+                  {at.getNamedAttr("shape", table.getShape())})
+      ->getResult(0);
+}
+
 FailureOr<SmallVector<Value>>
 Importer::lowerReturn(const ModuleDecl &decl, const AstNode &node,
                       OpBuilder &at, llvm::StringMap<Value> &values,

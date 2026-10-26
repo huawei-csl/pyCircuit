@@ -1,0 +1,4 @@
+# State declared without an initializer: source admission, the final marker,
+# native X/reset/host-Reset semantics (workers 1/2), physical RTL replay and,
+# when sv2v and yosys are available, reset-free flops under SYNTHESIS.
+# RUN: %python %S/Inputs/state-no-reset.py --repo %src --source-compiler %pycircuit_source_unit --linker %pycircuit_link --emitter %pycircuit_emit --cxx %cxx --scratch %t.dir

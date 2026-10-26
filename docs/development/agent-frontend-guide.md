@@ -444,6 +444,12 @@ The storage requirement is based on the declared type, not a whitelist of the
 | Struct, including admitted nested records | Carry the structured value as a typed storage payload; retain its field layout and state ownership. |
 | Boolean, bounded Integer and other arithmetic data types with a specified finite storage representation | Use the common type/lowering path, preserving the logical kind, range and arithmetic conversion rules. |
 
+A declaration without an initializer, such as `coeff: ac.u8`, has no reset
+value: its storage child keeps the domain clock/reset connections but ignores
+reset, holds X until first written and retains its value across a host Reset.
+Use it only for state that is written before it is read; see
+[state without a reset value](../reference/language.md#state-without-a-reset-value).
+
 Arithmetic operations compute values; they do not determine whether a value is
 stored. A module-scope state declaration establishes storage. An ordinary
 combination such as `next_count = count + 1`, a helper local, or a child output

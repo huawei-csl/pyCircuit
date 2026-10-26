@@ -33,6 +33,13 @@ independently of the declared index range of T.
 | --- | --- | --- |
 | `dff` | Rising-edge capture, synchronous active-high reset to init | — |
 | `dffe` | Same reset priority; disabled data holds Q | — |
+
+`dff` and `dffe` also take `bit pyc_no_reset` (default 0). Set, the register
+ignores the value of `rst`: a reset edge updates exactly as any other edge,
+the managed reset phase retains Q instead of loading `init`, and under
+`SYNTHESIS` no reset term remains. `rst` stays connected because it names the
+clock domain, and an unknown `rst` at a rising edge is still diagnosed. The
+compiler sets it for state declared without an initializer.
 | `fifo` | Complete-token FIFO, synchronous active-high reset to empty | T tokens |
 | `sync_mem` | 1R1W old-data synchronous read | T entries |
 | `sync_mem_dp` | 2R1W, independent registered read outputs | T entries |

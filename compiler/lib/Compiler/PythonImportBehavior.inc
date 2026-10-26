@@ -3085,7 +3085,9 @@ LogicalResult Importer::emitBehavioral(ModuleDecl &decl) {
                         "and module-scope rule calls";
     if (queueResultNames.contains(assignmentRoot(target)))
       return error() << "queue result binding is immutable";
-    if (target.kind() != "Name" || !initializer ||
+    // `name: T` without a value declares state with no reset value.
+    bool noReset = stmt.kind() == "AnnAssign" && !initializer;
+    if (target.kind() != "Name" || (!initializer && !noReset) ||
         values.contains(target.string("id")) ||
         names.contains(target.string("id")) ||
         structuralInstances.contains(target.string("id")) ||
@@ -3098,8 +3100,10 @@ LogicalResult Importer::emitBehavioral(ModuleDecl &decl) {
       return failure();
     Port stateContract{target.string("id").str(), *type, annotation,
                        annotationKind(annotation), fixedAnnotation(annotation)};
-    auto init = stateInitializer(stateContract, initializer, stmt, at,
-                                  decl.symbol, values, structuralInstances);
+    auto init = noReset
+                    ? noResetInitializer(stateContract, stmt, at, decl.symbol)
+                    : stateInitializer(stateContract, initializer, stmt, at,
+                                       decl.symbol, values, structuralInstances);
     if (failed(init)) return failure();
     auto builtin = headers.lookupBuiltin("dffe");
     if (!builtin || !headers.isTrustedBuiltin(builtin.declaration))
@@ -3119,6 +3123,7 @@ LogicalResult Importer::emitBehavioral(ModuleDecl &decl) {
                             table ? ac::CollectionOp::getOperationName()
                                   : ac::InstanceOp::getOperationName(),
                             {}, TypeRange{*type}, attrs);
+    if (noReset) storage->setAttr("ac.no_reset", at.getUnitAttr());
     helperOwnerBindings.insert(target.string("id"));
     states.push_back({target.string("id").str(), *type, *init, storage, stmt});
     values[target.string("id")] = storage->getResult(0);

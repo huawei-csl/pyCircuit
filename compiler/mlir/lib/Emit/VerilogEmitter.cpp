@@ -1291,7 +1291,11 @@ static LogicalResult emitFunc(func::FuncOp f, raw_ostream &os, const VerilogEmit
         auto emitReg = [&](llvm::StringRef suffix, llvm::StringRef instanceSuffix) {
           os << "pyc_reg #(.WIDTH(" << *width << ")) " << nt.get(r.getQ()) << "_inst" << instanceSuffix << " (\n";
           os << "  .clk(" << nt.get(r.getClk()) << "),\n";
-          os << "  .rst(" << nt.get(r.getRst()) << "),\n";
+          // `pyc.no_reset`: the reset is tied off, so synthesis keeps no reset gate.
+          if (r->hasAttr("pyc.no_reset"))
+            os << "  .rst(1'b0),\n";
+          else
+            os << "  .rst(" << nt.get(r.getRst()) << "),\n";
           os << "  .en(" << nt.get(r.getEn()) << "),\n";
           os << "  .d(" << nt.get(r.getNext()) << suffix << "),\n";
           os << "  .init(" << nt.get(r.getInit()) << suffix << "),\n";

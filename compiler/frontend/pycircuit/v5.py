@@ -192,6 +192,7 @@ class CycleAwareDomain:
         reset_value: int | list[Any] = 0,
         name: str = "",
         shape: list[int] | None = None,
+        no_reset: bool = False,
     ) -> "StateSignal":
         """Internal: create a feedback register. Use ``domain.signal()`` instead."""
         reg_name = str(name).strip() or f"_v5_reg_{self._reg_serial}"
@@ -203,6 +204,7 @@ class CycleAwareDomain:
             width=int(width),
             shape=list(shape or []),
             init=reset_value,
+            no_reset=no_reset,
         )
         return StateSignal(self, reg, self._occurrence)
 
@@ -215,6 +217,7 @@ class CycleAwareDomain:
         shape: list[int] | None = None,
         fields: Any | None = None,
         enum: Any | None = None,
+        no_reset: bool = False,
     ) -> "ForwardSignal | Any":
         """Declare a forward-declared register with ``<<=`` / ``.assign()`` syntax.
 
@@ -233,6 +236,10 @@ class CycleAwareDomain:
         ``enum=`` (a ``PycEnum`` subclass) sizes the register to the enum width
         and returns an ``EnumSignal`` supporting ``x.is_(E.MEMBER)`` and
         ``x <<= E.MEMBER``.
+
+        ``no_reset=True`` declares the register without reset: it ignores the
+        domain's reset, powers up unknown, and ``reset_value`` is not used. For a
+        register whose contents are read only once they have been written.
         """
         if enum is not None:
             if fields is not None or shape is not None:
@@ -247,7 +254,7 @@ class CycleAwareDomain:
                 raise ValueError(
                     f"signal width {width} does not match enum {enum.__name__} width {ew}"
                 )
-            st = self._state(width=width, reset_value=reset_value, name=name)
+            st = self._state(width=width, reset_value=reset_value, name=name, no_reset=no_reset)
             return EnumSignal(enum, ForwardSignal(st))
         if fields is not None:
             if shape is not None:
@@ -263,7 +270,7 @@ class CycleAwareDomain:
                 )
         if width is None:
             raise TypeError("signal() requires width= (or fields=)")
-        st = self._state(width=width, reset_value=reset_value, name=name, shape=shape)
+        st = self._state(width=width, reset_value=reset_value, name=name, shape=shape, no_reset=no_reset)
         fwd = ForwardSignal(st)
         return fields.bind(fwd) if fields is not None else fwd
 

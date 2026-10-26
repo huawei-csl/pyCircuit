@@ -280,8 +280,10 @@ static void unrollReg(pyc::RegOp op, OpBuilder &builder) {
   walkShape(shape, 0, indices, [&](const llvm::SmallVectorImpl<int64_t> &idx) {
     Value n = extractLane(builder, op.getLoc(), op.getNext(), idx);
     Value i = extractLane(builder, op.getLoc(), op.getInit(), idx);
-    qLanes.push_back(builder.create<pyc::RegOp>(op.getLoc(), vt.getElementType(),
-                                                  clk, rst, en, n, i).getQ());
+    auto lane = builder.create<pyc::RegOp>(op.getLoc(), vt.getElementType(), clk, rst, en, n, i);
+    if (op->hasAttr("pyc.no_reset"))
+      lane->setAttr("pyc.no_reset", builder.getUnitAttr());
+    qLanes.push_back(lane.getQ());
   });
   Value replacement = (shape.size() == 1)
       ? builder.create<pyc::VCreateOp>(op.getLoc(), vt, qLanes)

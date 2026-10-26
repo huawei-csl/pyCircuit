@@ -61,7 +61,8 @@ struct PackI1RegsPass : public PassWrapper<PackI1RegsPass, OperationPass<func::F
     auto sameKey = [&](pyc::RegOp r) -> bool {
       if (runRegs.empty())
         return true;
-      return r.getClk() == runClk && r.getRst() == runRst && r.getEn() == runEn;
+      return r.getClk() == runClk && r.getRst() == runRst && r.getEn() == runEn &&
+             r->hasAttr("pyc.no_reset") == runRegs.front()->hasAttr("pyc.no_reset");
     };
 
     auto flushRun = [&](Operation *insertBefore) {
@@ -154,6 +155,8 @@ struct PackI1RegsPass : public PassWrapper<PackI1RegsPass, OperationPass<func::F
     Value initPacked = builder.create<pyc::ConcatOp>(loc, packedTy, initInputs).getResult();
     auto packedReg =
         builder.create<pyc::RegOp>(loc, packedTy, first.getClk(), first.getRst(), first.getEn(), nextPacked, initPacked);
+    if (first->hasAttr("pyc.no_reset"))
+      packedReg->setAttr("pyc.no_reset", builder.getUnitAttr());
 
     llvm::SmallVector<Value> bits;
     bits.reserve(n);

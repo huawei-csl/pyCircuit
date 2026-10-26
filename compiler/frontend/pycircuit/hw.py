@@ -1333,7 +1333,8 @@ class Circuit(Module):
         en: Union[Wire, Signal, int, LiteralValue] = 1,
         shape: list[int],
         stage: str | None = None,
-        signed: bool | None = None
+        signed: bool | None = None,
+        no_reset: bool = False
     ) -> Reg[Vector]: ...
     
     @overload
@@ -1348,7 +1349,8 @@ class Circuit(Module):
         init: Union[Wire, Reg, Signal, int, list, LiteralValue] | None = None,
         en: Union[Wire, Signal, int, LiteralValue] = 1,
         stage: str | None = None,
-        signed: bool | None = None
+        signed: bool | None = None,
+        no_reset: bool = False
     ) -> Reg: ...
     
     def out(
@@ -1364,6 +1366,7 @@ class Circuit(Module):
         shape: list[int] | None = None,
         stage: str | None = None,
         signed: bool | None = None,  # reserved for future type inference / lowering
+        no_reset: bool = False,
     ) -> Reg:
         """Declare a named stateful variable (backedge register).
 
@@ -1375,6 +1378,9 @@ class Circuit(Module):
         With ``shape=...``, ``next``/``q``/``init`` are vectors of that shape.
         Scalar ``init`` is broadcast to ``shape``; ``en`` stays scalar ``i1``
         (shared enable for the whole vector register).
+
+        ``no_reset=True`` declares a register without reset: ``rst`` is still the
+        domain's, but the emitted register ignores it and ``init`` is never loaded.
         """
         _ = signed  # unused for now (kept for API stability)
         shape = [] if shape is None else list(shape)
@@ -1417,7 +1423,7 @@ class Circuit(Module):
         if shape and isinstance(init_w.ty, Vector) and init_w.ty.shape() != shape:
             raise TypeError(f"out() init shape must be {shape}, got {init_w.ty}")
 
-        r = self.reg(clk, rst, en_w, next_w, init_w)
+        r = self.reg(clk, rst, en_w, next_w, init_w, no_reset=no_reset)
 
         # Name the observable value of the state variable.
         q_named = Wire(self, self.alias(r.q.sig, name=fullname), signed=r.q.signed)
@@ -1440,12 +1446,14 @@ class Circuit(Module):
         en: Union[Wire, Signal],
         next_: Union[Wire, Signal],
         init: Union[Wire, Signal, int, LiteralValue],
+        *,
+        no_reset: bool = False,
     ) -> Reg:
         en = Wire.as_wire(en, m=self)
         next_ = Wire.as_wire(next_, m=self)
         init = Wire.as_wire(init, m=self, width=next_.width)
         self._record_struct_state_alloc()
-        q_sig = super().reg(clk, rst, en.sig, next_.sig, init.sig)
+        q_sig = super().reg(clk, rst, en.sig, next_.sig, init.sig, no_reset=no_reset)
         q_w = Wire(self, q_sig)
         return Reg(q=q_w, clk=clk, rst=rst, en=en, next=next_, init=init)
 

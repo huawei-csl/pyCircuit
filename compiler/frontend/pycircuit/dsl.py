@@ -680,7 +680,8 @@ class Module:
             return
         self._emit(f"pyc.assert {cond.ref} {{msg = {json.dumps(s, ensure_ascii=False)}}}")
 
-    def reg(self, clk: Signal, rst: Signal, en: Signal, next_: Signal, init: Signal) -> Signal:
+    def reg(self, clk: Signal, rst: Signal, en: Signal, next_: Signal, init: Signal,
+            *, no_reset: bool = False) -> Signal:
         if not isinstance(clk.ty, Clock):
             raise TypeError("reg clk must be !pyc.clock")
         if not isinstance(rst.ty, Reset):
@@ -689,7 +690,11 @@ class Module:
             raise TypeError("reg en must be i1")
         self._require_same_ty(next_.ty, init.ty, "reg")
         tmp = self._get_next_temp_var()
-        self._emit(f"{tmp} = pyc.reg {clk.ref}, {rst.ref}, {en.ref}, {next_.ref}, {init.ref} : {next_.ty}")
+        # `pyc.no_reset`: the emitters tie this register's reset off, so it powers up
+        # unknown and `init` is never loaded. `rst` stays an operand, which keeps the
+        # register in its clock domain for every pass that reads one.
+        attrs = " {pyc.no_reset}" if no_reset else ""
+        self._emit(f"{tmp} = pyc.reg {clk.ref}, {rst.ref}, {en.ref}, {next_.ref}, {init.ref}{attrs} : {next_.ty}")
         return Signal(ref=tmp, ty=next_.ty)
 
     def fifo(

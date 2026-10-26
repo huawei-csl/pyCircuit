@@ -1286,6 +1286,9 @@ static LogicalResult emitFunc(func::FuncOp f, llvm::raw_ostream &os, const CppEm
       }
 	  os << "  }\n\n";
 
+	  // `pyc.no_reset` registers take this never-asserted reset instead of the domain's.
+	  if (llvm::any_of(regs, [](pyc::RegOp r) { return r->hasAttr("pyc.no_reset"); }))
+	    os << "  pyc::cpp::Wire<1> pyc_no_reset_rst{};\n";
 	  for (auto r : regs) {
 	    unsigned w = bitWidth(r.getQ().getType());
 	    if (w == 0)
@@ -1577,7 +1580,9 @@ static LogicalResult emitFunc(func::FuncOp f, llvm::raw_ostream &os, const CppEm
          << cppType(r.getQ().getType()) << ">(";
     else
       os << "    " << nt.get(r.getQ()) << "_inst = new pyc::cpp::pyc_reg<" << w << ">(";
-    os << nt.get(r.getClk()) << ", " << nt.get(r.getRst()) << ", " << nt.get(r.getEn()) << ", "
+    os << nt.get(r.getClk()) << ", "
+       << (r->hasAttr("pyc.no_reset") ? std::string("pyc_no_reset_rst") : nt.get(r.getRst())) << ", "
+       << nt.get(r.getEn()) << ", "
        << nt.get(r.getNext()) << ", " << nt.get(r.getInit()) << ", " << nt.get(r.getQ()) << ");\n";
   }
   for (auto mem : syncMems) {

@@ -29,9 +29,14 @@ module dffe #(
     T q_current;
     // Physical export proves this typed elaboration value from the declared
     // initializer DAG. Default adapters retain their existing startup policy.
+`ifndef SYNTHESIS
+    // Simulation only: silicon has no initial value, and an `initial` that
+    // survives into synthesis becomes an init attribute the mapped flop lacks,
+    // which equivalence checking then reads as a different starting state.
     generate if (pyc_physical) begin : physical_initialization
         initial q_current = pyc_initial;
     end endgenerate
+`endif
 `ifndef SYNTHESIS
     T payload_x_check;
     logic [PAYLOAD_BITS-1:0] packed_x_check;

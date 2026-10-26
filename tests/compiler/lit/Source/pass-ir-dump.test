@@ -1,0 +1,4 @@
+# Diagnostics-only per-pass IR dump on compile and link: off by default,
+# ordered files per pass and phase, phase/filter selection, rejection of
+# malformed requests, and byte-identical publications.
+# RUN: %python %S/Inputs/pass-ir-dump.py --repo %src --source-compiler %pycircuit_source_unit --linker %pycircuit_link --emitter %pycircuit_emit --cxx %cxx --scratch %t.dir

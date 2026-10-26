@@ -1,6 +1,7 @@
 #include "Compiler/SourceLink.h"
 #include "Dialect/ACIR/HardwareSourceChecks.h"
 #include "Compiler/AnchorArtifact.h"
+#include "Compiler/PassIRDump.h"
 #include "Compiler/SourceUnit.h"
 #include "pycircuit/Dialect/ACIR/ACIRDialect.h"
 #include "pycircuit/Dialect/ACIR/HardwareAnalysis.h"
@@ -47,6 +48,9 @@ struct Options {
   std::optional<std::string> unitOwnerOutput;
   std::optional<std::string> transactionInputOutput;
   std::optional<std::string> transactionOutputOutput;
+  std::optional<std::string> dumpPassIR;
+  std::optional<std::string> dumpPassIRPhase;
+  std::optional<std::string> dumpPassIRFilter;
   bool verifyOnly = false;
 };
 
@@ -98,7 +102,9 @@ bool parseOptions(int argc, char **argv, Options &options) {
         arg != "--design" && arg != "--from-anchor" && arg != "--target" && arg != "--output" &&
         arg != "--glue-output" && arg != "--entry-owner-out" &&
         arg != "--unit-owner-out" && arg != "--transaction-input-out" &&
-        arg != "--transaction-output-out" && arg != "--verify-only") {
+        arg != "--transaction-output-out" && arg != "--verify-only" &&
+        arg != "--dump-pass-ir" && arg != "--dump-pass-ir-phase" &&
+        arg != "--dump-pass-ir-filter") {
       llvm::errs() << "error: unknown option '" << arg << "'\n";
       return false;
     }
@@ -153,6 +159,32 @@ bool parseOptions(int argc, char **argv, Options &options) {
       return false;
     } else if (arg == "--transaction-output-out" &&
                !setOnce(options.transactionOutputOutput, value, arg)) {
+      return false;
+    } else if (arg == "--dump-pass-ir" &&
+               !setOnce(options.dumpPassIR, value, arg)) {
+      return false;
+    } else if (arg == "--dump-pass-ir-phase" &&
+               !setOnce(options.dumpPassIRPhase, value, arg)) {
+      return false;
+    } else if (arg == "--dump-pass-ir-filter" &&
+               !setOnce(options.dumpPassIRFilter, value, arg)) {
+      return false;
+    }
+  }
+  if ((options.dumpPassIRPhase || options.dumpPassIRFilter) &&
+      !options.dumpPassIR) {
+    llvm::errs() << "error: --dump-pass-ir-phase and --dump-pass-ir-filter "
+                    "require --dump-pass-ir\n";
+    return false;
+  }
+  if (options.dumpPassIR) {
+    acir::compiler::PassIRDumpOptions dump;
+    dump.directory = *options.dumpPassIR;
+    dump.phase = options.dumpPassIRPhase.value_or("after");
+    dump.filter = options.dumpPassIRFilter.value_or("");
+    std::string error;
+    if (mlir::failed(acir::compiler::configurePassIRDump(dump, error))) {
+      llvm::errs() << "error: " << error << '\n';
       return false;
     }
   }

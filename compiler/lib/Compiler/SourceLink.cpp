@@ -1,6 +1,7 @@
 #include "SourceLink.h"
 #include "SourceEntryBoundary.h"
 #include "LiteralPayloadWires.h"
+#include "PassIRDump.h"
 #include "SourceHeaderHelpers.h"
 #include "Dialect/ACIR/HardwareSourceCheckPreflight.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -545,6 +546,7 @@ FailureOr<OwningOpRef<ModuleOp>> linkSourceUnits(
   // printing, using existing hardware limits for packages with no transactions.
   TransactionStageCapture capture;
   PassManager pipeline(context);
+  instrumentPassIRDump(pipeline);
   pipeline.addPass(acir::createNormalizeSourceControlFlowPass());
   pipeline.addPass(std::make_unique<CompactLiteralPayloadWiresPass>());
   pipeline.addPass(std::make_unique<DiscardUninstantiatedSourceTemplatesPass>());

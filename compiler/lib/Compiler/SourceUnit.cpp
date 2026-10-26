@@ -1,5 +1,6 @@
 #include "SourceUnit.h"
 
+#include "PassIRDump.h"
 #include "PythonImportRecords.h"
 #include "SourceRuleWrites.h"
 #include "SourceMemoryBindings.h"
@@ -56,6 +57,7 @@ compilePythonSourceUnit(ModuleOp transport, DictionaryAttr sourceOwner,
   // Capture state outlives both the run and the manager's instrumentation.
   SourceImportCapture capture;
   PassManager lowering(transport.getContext());
+  instrumentPassIRDump(lowering);
   lowering.addPass(detail::createAnalyzeRuleWritesPass());
   lowering.addPass(detail::createInferSourceBindingsPass(sourceOwner, headers));
   lowering.addPass(detail::createLowerPythonSourcePass(sourceOwner, headers));
@@ -78,6 +80,7 @@ compilePythonSourceUnit(ModuleOp transport, DictionaryAttr sourceOwner,
               "source transaction effects are retained until link";
   if (!transactions) {
     PassManager hardware(transport.getContext());
+    instrumentPassIRDump(hardware);
     auto simplify = acir::createSimplifyRecordWiresPass();
     if (retainSourceImport)
       hardware.addInstrumentation(std::make_unique<SourceImportInstrumentation>(
@@ -91,6 +94,7 @@ compilePythonSourceUnit(ModuleOp transport, DictionaryAttr sourceOwner,
                           "exactly once";
   OwningOpRef<ModuleOp> interface(cast<ModuleOp>(body->clone()));
   PassManager pipeline(transport.getContext());
+  instrumentPassIRDump(pipeline);
   pipeline.addPass(acir::createExtractSourceInterfacePass());
   if (failed(pipeline.run(*interface)) ||
       failed(headers.verifyBodySnapshots(*body, *interface, emitError)))

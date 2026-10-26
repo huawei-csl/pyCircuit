@@ -6,6 +6,11 @@ published through the repository's release workflow.
 
 ## Unreleased
 
+- Add `--dump-pass-ir DIR` (with `--dump-pass-ir-phase` and
+  `--dump-pass-ir-filter`) to `pycircuit compile` and `pycircuit link`: a
+  diagnostics-only dump of the IR around every compiler pass, ordered across
+  all pass managers of one command. The compiler pipeline reference now lists
+  those passes.
 - Admit module-scope state declared without an initializer (`coeff: ac.u8`)
   as state with no reset value: it is X until written, ignores reset and keeps
   its value across a host Reset. The storage leaf is marked `ac.no_reset`,

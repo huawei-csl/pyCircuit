@@ -161,8 +161,13 @@ def _compile_source_unit(
     replace: bool = False,
     cancelled: Callable[[str], bool] | None = None,
     filesystem: _PublicationFileSystem | None = None,
+    native_options: Sequence[str] = (),
 ) -> _SourceCompileResult:
-    """Compile one source and atomically publish its source-unit directory."""
+    """Compile one source and atomically publish its source-unit directory.
+
+    ``native_options`` are diagnostics-only native compiler options, such as
+    the per-pass IR dump; they never change the published unit.
+    """
 
     fs = filesystem or _PublicationFileSystem()
     destination = Path(output)
@@ -252,6 +257,7 @@ def _compile_source_unit(
             ]
             for header_path in header_paths:
                 command.extend(("--header", str(header_path)))
+            command.extend(native_options)
             completed = subprocess.run(
                 command, text=True, capture_output=True, check=False
             )

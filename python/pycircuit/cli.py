@@ -55,6 +55,9 @@ def _cmd_compile(args: argparse.Namespace) -> int:
             package_prefix=args.package_prefix,
             interface_units=args.interface_units,
             replace=args.replace,
+            dump_pass_ir=args.dump_pass_ir,
+            dump_pass_ir_phase=args.dump_pass_ir_phase,
+            dump_pass_ir_filter=args.dump_pass_ir_filter,
         )
     except (
         _DriverError,
@@ -85,6 +88,9 @@ def _cmd_link(args: argparse.Namespace) -> int:
             target=args.target,
             from_anchor=args.from_anchor,
             verify_only=args.verify_only,
+            dump_pass_ir=args.dump_pass_ir,
+            dump_pass_ir_phase=args.dump_pass_ir_phase,
+            dump_pass_ir_filter=args.dump_pass_ir_filter,
         )
     except (
         _DriverError,
@@ -128,6 +134,27 @@ def _cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def _add_pass_ir_dump(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--dump-pass-ir",
+        metavar="DIR",
+        default=None,
+        help="Diagnostics: write the IR around every compiler pass into DIR",
+    )
+    parser.add_argument(
+        "--dump-pass-ir-phase",
+        choices=("before", "after", "both"),
+        default=None,
+        help="Which side of each pass to dump (default: after)",
+    )
+    parser.add_argument(
+        "--dump-pass-ir-filter",
+        metavar="REGEX",
+        default=None,
+        help="Dump only passes whose argument matches REGEX",
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="pycircuit", allow_abbrev=False)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -165,6 +192,7 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Republish the target under the same owner and artifact kind",
     )
+    _add_pass_ir_dump(compile_units)
     compile_units.set_defaults(fn=_cmd_compile)
 
     link_program = sub.add_parser(
@@ -203,6 +231,7 @@ def main(argv: list[str] | None = None) -> int:
         "--from-anchor", help="Reload a self-contained saved anchor"
     )
     link_program.add_argument("--verify-only", action="store_true")
+    _add_pass_ir_dump(link_program)
     link_program.set_defaults(fn=_cmd_link)
 
     emit = sub.add_parser("emit", help="Emit C++ or Verilog from a saved final design.")

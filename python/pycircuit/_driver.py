@@ -87,6 +87,27 @@ def _managed_transaction_exists(path: Path) -> bool:
     return filesystem.kind(paths.control) == "directory"
 
 
+def _pass_ir_dump_options(
+    directory: str | Path | None, phase: str | None, pattern: str | None
+) -> list[str]:
+    """Native options for the diagnostics-only per-pass IR dump."""
+
+    if directory is None:
+        if phase is not None or pattern is not None:
+            raise _DriverError(
+                "--dump-pass-ir-phase and --dump-pass-ir-filter require --dump-pass-ir"
+            )
+        return []
+    if phase is not None and phase not in ("before", "after", "both"):
+        raise _DriverError("pass IR dump phase must be before, after or both")
+    options = ["--dump-pass-ir", str(Path(directory).resolve())]
+    if phase is not None:
+        options += ["--dump-pass-ir-phase", phase]
+    if pattern is not None:
+        options += ["--dump-pass-ir-filter", pattern]
+    return options
+
+
 def compile_command(
     *,
     source: str | Path,
@@ -95,9 +116,15 @@ def compile_command(
     package_prefix: str = "",
     interface_units: Sequence[str | Path] = (),
     replace: bool = False,
+    dump_pass_ir: str | Path | None = None,
+    dump_pass_ir_phase: str | None = None,
+    dump_pass_ir_filter: str | None = None,
 ) -> _SourceCompileResult:
     """``pycircuit compile``: one source into one published source unit."""
 
+    native_options = _pass_ir_dump_options(
+        dump_pass_ir, dump_pass_ir_phase, dump_pass_ir_filter
+    )
     for unit in interface_units:
         _require_published_unit(unit, role="compile interface unit")
     return _compile_source_unit(
@@ -108,6 +135,7 @@ def compile_command(
         output=output,
         interface_units=tuple(interface_units),
         replace=replace,
+        native_options=native_options,
     )
 
 
@@ -192,6 +220,9 @@ def link_command(
     verify_only: bool = False,
     replace: bool = False,
     filesystem: _PublicationFileSystem | None = None,
+    dump_pass_ir: str | Path | None = None,
+    dump_pass_ir_phase: str | None = None,
+    dump_pass_ir_filter: str | None = None,
 ) -> _PublicationResult:
     """``pycircuit link``: one closed unit set into one published program.
 
@@ -199,7 +230,12 @@ def link_command(
     exactly as the private per-source entry already allows.
     """
 
+    native_options = _pass_ir_dump_options(
+        dump_pass_ir, dump_pass_ir_phase, dump_pass_ir_filter
+    )
     if from_anchor is not None:
+        if native_options:
+            raise _DriverError("--dump-pass-ir applies to source-unit link only")
         if (
             units
             or top is not None
@@ -309,6 +345,7 @@ def link_command(
             filesystem=fs,
         ) as locks:
             command = [str(harness), "--reset-semantics", reset_semantics]
+            command += native_options
             if parameter_bindings:
                 command += ["--parameters", str(parameter_snapshot)]
             for index, key in enumerate(sorted(directories)):

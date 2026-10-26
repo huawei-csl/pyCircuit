@@ -1,3 +1,4 @@
+#include "Compiler/PassIRDump.h"
 #include "Compiler/SourceUnit.h"
 #include "pycircuit/Dialect/ACIR/ACIRDialect.h"
 
@@ -33,6 +34,15 @@ llvm::cl::opt<std::string> depsOutput("deps-out", llvm::cl::init(""));
 llvm::cl::opt<std::string> sourceImportOutput(
     "source-import-out", llvm::cl::init(""),
     llvm::cl::desc("Retain reproduction post-Lower, pre-Simplify IR text"));
+llvm::cl::opt<std::string> dumpPassIR(
+    "dump-pass-ir", llvm::cl::init(""),
+    llvm::cl::desc("Write the IR around every compiler pass into this directory"));
+llvm::cl::opt<std::string> dumpPassIRPhase(
+    "dump-pass-ir-phase", llvm::cl::init("after"),
+    llvm::cl::desc("Pass IR dump phase: before, after or both"));
+llvm::cl::opt<std::string> dumpPassIRFilter(
+    "dump-pass-ir-filter", llvm::cl::init(""),
+    llvm::cl::desc("Regex over pass arguments selecting the passes to dump"));
 
 void printNonfatalDiagnostic(const mlir::Diagnostic &diagnostic) {
   llvm::errs() << diagnostic.getLocation() << ": ";
@@ -239,6 +249,21 @@ openSourceImport(llvm::ArrayRef<llvm::StringRef> otherPaths) {
 int main(int argc, char **argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv,
                                     "isolated pyCircuit source-unit harness\n");
+  if ((dumpPassIRPhase.getNumOccurrences() ||
+       dumpPassIRFilter.getNumOccurrences()) &&
+      dumpPassIR.empty()) {
+    llvm::errs() << "dump-pass-ir-phase and dump-pass-ir-filter require "
+                    "dump-pass-ir\n";
+    return 1;
+  }
+  if (!dumpPassIR.empty()) {
+    std::string error;
+    if (mlir::failed(acir::compiler::configurePassIRDump(
+            {dumpPassIR, dumpPassIRPhase, dumpPassIRFilter}, error))) {
+      llvm::errs() << error << '\n';
+      return 1;
+    }
+  }
   mlir::DialectRegistry dialects;
   dialects.insert<acir::ac::ACIRDialect, mlir::arith::ArithDialect,
                   mlir::func::FuncDialect>();

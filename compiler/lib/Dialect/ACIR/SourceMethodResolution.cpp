@@ -57,7 +57,7 @@ namespace {
 FailureOr<Operation *> resolveReferenceReceiver(
     Operation *module, DictionaryAttr receiver, SourceModuleLookup lookup,
     Operation *site, uint64_t &work, bool formalsVerified) {
-  auto charge = [&]() { return ++work <= 1024 * 1024; };
+  auto charge = [&]() { return ++work <= 1024ull * 1024 * 1024; };
   auto path = receiver ? receiver.getAs<ArrayAttr>("instance_path") : ArrayAttr();
   auto reference = receiver ? receiver.getAs<StringAttr>("reference") : StringAttr();
   if (!receiver || !path || receiver.size() != (reference ? 2u : 1u) || path.size() > 128)
@@ -873,7 +873,7 @@ LogicalResult concreteRelativeMethod(const SourceMethodView &method,
   bindings.owner = method.module;
   uint64_t work = 0;
   auto enter = [&](unsigned depth) -> LogicalResult {
-    if (depth > 128 || ++work > 1024 * 1024)
+    if (depth > 128 || ++work > 1024ull * 1024 * 1024)
       return site->emitOpError() << "relative Method contract work/depth budget exceeded";
     return fees ? fees->workStorage(site, 1, sizeof(Attribute) + sizeof(Type))
                 : success();
@@ -977,7 +977,7 @@ FailureOr<ResolvedSourceMethod> resolve(Operation *caller, SymbolRefAttr symbol,
     llvm::DenseSet<Attribute> seenNames, seenOccurrences;
     auto consider = [&](StringAttr name, DictionaryAttr occurrence,
                         Operation *op, DictionaryAttr row) -> LogicalResult {
-      if (++work > 1024 * 1024)
+      if (++work > 1024ull * 1024 * 1024)
         return site->emitOpError() << "Method receiver work budget exceeded";
       if (!name || !occurrence ||
           failed(detail::verifyOccurrence(
@@ -1008,7 +1008,7 @@ FailureOr<ResolvedSourceMethod> resolve(Operation *caller, SymbolRefAttr symbol,
       if (isa<ModuleImportOp>(owner) && !(**inventory).hasSummary)
         return site->emitOpError() << "Method receiver suffix requires published instance owners";
       for (size_t i = 0; i < (**inventory).instanceCount; ++i) {
-        if (++work > 1024 * 1024)
+        if (++work > 1024ull * 1024 * 1024)
           return site->emitOpError() << "Method receiver work budget exceeded";
         if (failed(fees->workStorage(site, 1, 0))) return failure();
         const auto &candidate = (**inventory).instances[i];
@@ -1239,7 +1239,7 @@ FailureOr<ResolvedSourceMethod> resolve(Operation *caller, SymbolRefAttr symbol,
   // remains callable from an enclosing transaction.
   if (auto body = dyn_cast<ModuleOp>(owner)) {
     for (auto transaction : body.getBody().front().getOps<SourceTransactionOp>()) {
-      if (++work > 1024 * 1024)
+      if (++work > 1024ull * 1024 * 1024)
         return site->emitOpError() << "autonomous Rule registration work budget exceeded";
       if (context && failed(fees->workStorage(site, 1, 0))) return failure();
       if (transaction.getOccurrence() != transaction.getDeclaration() ||

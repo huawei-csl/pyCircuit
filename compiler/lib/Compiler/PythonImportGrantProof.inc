@@ -24,13 +24,13 @@ public:
     return proof->disjointAtAddress(*a, *b, *i, *j);
   }
   bool chargeProduct(uint64_t first, uint64_t second) {
-    if (first && second > 1048576 / first) return charge(1048577);
+    if (first && second > (1048576ull * 1024) / first) return charge((1048576ull * 1024 + 1));
     return charge(first * second);
   }
   StringRef failureReason() const { return reason.empty() ? proof->failureReason() : StringRef(reason); }
   bool charge(uint64_t amount = 1) {
     if (!reason.empty()) return false;
-    if (work > 1048576 || amount > 1048576 - work) {
+    if (work > (1048576ull * 1024) || amount > (1048576ull * 1024) - work) {
       reason = "owner-enable proof work budget exhausted";
       return false;
     }

@@ -171,7 +171,7 @@ public:
   }
 
 private:
-  static constexpr uint64_t maxWork = 1024 * 1024;
+  static constexpr uint64_t maxWork = 256ull * 1024 * 1024;
   uint64_t work = 0;
   StringRef phase = "raw preflight";
   bool exhausted = false;
@@ -384,7 +384,7 @@ private:
     return budget.charge(site, summaries.find(root)->second.nativeWork);
   }
 
-  static constexpr uint64_t maxExpandedWork = 1024 * 1024;
+  static constexpr uint64_t maxExpandedWork = 256ull * 1024 * 1024;
   StateAnalysisBudget &budget;
   llvm::DenseMap<Node, Summary> summaries;
   uint64_t occurrenceEntries = 0, occurrenceCapacity = 0;
@@ -516,7 +516,7 @@ LogicalResult priceResolver(mlir::ModuleOp package, StateAnalysisBudget &budget,
   // The resolver verifies module signatures, direct Instance declarations and
   // Method headers. It does not recursively verify every callable's payload
   // body. Keep those costs separate from per-invocation body expansion below.
-  constexpr uint64_t limit = 1024 * 1024;
+  constexpr uint64_t limit = 1024ull * 1024 * 1024;
   auto add = [&](uint64_t &total, uint64_t units) {
     total = total > limit || units > limit - total ? limit + 1 : total + units;
   };

@@ -176,7 +176,7 @@ FailureOr<const SourceRuleCallPlan *> SourceRuleWritesAnalysis::lookup(
 }
 
 bool SourceRuleWritesAnalysis::charge(uint64_t amount) {
-  constexpr uint64_t limit = 1048576;
+  constexpr uint64_t limit = 1048576ull * 1024;
   if (amount > limit - work) {
     operation->emitError(
         "owner-enable proof work budget exhausted during write planning");

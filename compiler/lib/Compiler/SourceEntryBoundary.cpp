@@ -64,7 +64,7 @@ LogicalResult sameTree(Operation *left, Operation *right, IRMapping &mapping,
 }
 LogicalResult verifyEntryBoundaryNormalization(ModuleOp original, ModuleOp candidate) {
   ac::HardwareSourceCheckLimits limits;
-  limits.maxWorkUnits = 1024 * 1024;
+  limits.maxWorkUnits = 1024ull * 1024 * 1024;
   SourceCheckBudget budget(limits);
   budget.setPhase("entry boundary normalization proof");
   if (!original || !candidate || failed(prepay(original, budget)) || failed(prepay(candidate, budget)) ||
@@ -138,7 +138,7 @@ FailureOr<OwningOpRef<ModuleOp>> normalizeEntryBoundary(ModuleOp original) {
   if (failed(applies)) return failure();
   if (!*applies) return OwningOpRef<ModuleOp>();
   ac::HardwareSourceCheckLimits limits;
-  limits.maxWorkUnits = 1024 * 1024;
+  limits.maxWorkUnits = 1024ull * 1024 * 1024;
   SourceCheckBudget budget(limits);
   budget.setPhase("entry boundary normalization");
   if (failed(prepay(original, budget))) return failure();

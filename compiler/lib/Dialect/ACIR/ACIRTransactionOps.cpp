@@ -155,7 +155,7 @@ LogicalResult region(Operation *operation, unsigned ordinal, TypeRange inputs,
 // branch.
 LogicalResult branchPayload(Operation *operation, bool arm, unsigned depth,
                             uint64_t &work) {
-  if (depth > 128 || ++work > 1024 * 1024)
+  if (depth > 128 || ++work > 1024ull * 1024 * 1024)
     return operation->emitOpError()
            << "source branch verification budget exceeded";
   if (arm && isa<SourceBranchOp>(operation)) {
@@ -1030,7 +1030,7 @@ LogicalResult SourceBranchOp::verifyRegions() {
          llvm::zip(yield.getOperandTypes(), getResultTypes())) {
       auto charge = [&](uint64_t units, uint64_t bytes) -> LogicalResult {
         uint64_t slots = bytes / 8 + (bytes % 8 != 0);
-        if (units > 1024 * 1024 - work || slots > 1024 * 1024 - work - units)
+        if (units > 1024ull * 1024 * 1024 - work || slots > 1024ull * 1024 * 1024 - work - units)
           return mlir::emitError(UnknownLoc::get(getContext()))
                  << "source branch verification budget exceeded";
         work += units + slots;

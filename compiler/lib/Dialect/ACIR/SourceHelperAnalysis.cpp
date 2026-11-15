@@ -14,7 +14,7 @@
 using namespace mlir;
 namespace acir::ac {
 namespace {
-constexpr uint64_t maxWork = 1024 * 1024;
+constexpr uint64_t maxWork = 256ull * 1024 * 1024;
 constexpr unsigned maxDepth = 128;
 
 bool payload(Type type) {

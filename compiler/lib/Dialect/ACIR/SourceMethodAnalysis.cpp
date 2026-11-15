@@ -864,7 +864,7 @@ private:
     };
     return visit(visit, callable.row.getAs<ArrayAttr>("body_effects"), true, 0);
   }
-  static constexpr uint64_t maxWork = 1024 * 1024;
+  static constexpr uint64_t maxWork = 256ull * 1024 * 1024;
   static constexpr unsigned maxDepth = 128;
   llvm::DenseMap<Attribute, SourceMethodSummary> &methods;
   llvm::DenseMap<Operation *, bool> &transactions;
@@ -961,7 +961,7 @@ FailureOr<bool> SourceMethodSummariesAnalysis::requiresTransactionPublication(
   uint64_t work = 0;
   std::function<FailureOr<bool>(Operation *, unsigned)> visit =
       [&](Operation *module, unsigned depth) -> FailureOr<bool> {
-    if (++work > 1024 * 1024 || depth > 128)
+    if (++work > 1024ull * 1024 * 1024 || depth > 128)
       return definition.emitOpError()
              << "transaction publication instance closure budget exceeded";
     if (marks.lookup(module) == 1)
@@ -975,7 +975,7 @@ FailureOr<bool> SourceMethodSummariesAnalysis::requiresTransactionPublication(
       result = bool(imported.getTransactionSummaryAttr());
     else if (auto body = dyn_cast<ModuleOp>(module)) {
       for (Operation &op : body.getBody().front()) {
-        if (++work > 1024 * 1024)
+        if (++work > 1024ull * 1024 * 1024)
           return definition.emitOpError()
                  << "transaction publication instance closure budget exceeded";
         if (isa<SourceStateOp, SourceMethodOp, SourceTransactionOp>(op) ||

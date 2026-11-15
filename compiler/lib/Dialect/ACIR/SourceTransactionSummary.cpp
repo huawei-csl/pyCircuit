@@ -131,7 +131,7 @@ public:
   bool ok() const { return !exhausted; }
 
 private:
-  static constexpr uint64_t maxWork = 1024 * 1024;
+  static constexpr uint64_t maxWork = 256ull * 1024 * 1024;
   static constexpr unsigned maxDepth = 128;
   Operation *site;
   uint64_t work = 0;

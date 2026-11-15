@@ -8442,7 +8442,7 @@ public:
       return;
     }
     ac::HardwareSourceCheckLimits limits;
-    limits.maxWorkUnits = 1024 * 1024;
+    limits.maxWorkUnits = 1024ull * 1024 * 1024;
     SourceCheckBudget budget(limits);
     auto prepared = detail::prepareTransactionLowering(input, analysis, budget);
     if (failed(prepared)) { signalPassFailure(); return; }
@@ -8482,7 +8482,7 @@ public:
     // clone, exact correspondence proof and final verification in this phase,
     // just as they do through the routing envelope transition above.
     if (ac::detail::findUnloweredTransaction(input))
-      limits.maxWorkUnits = 1024 * 1024;
+      limits.maxWorkUnits = 1024ull * 1024 * 1024;
     SourceCheckBudget budget(limits);
     auto candidate = detail::materializeHardwareState(input, budget);
     if (failed(candidate) || failed(detail::verifyHardwareStateMaterialization(

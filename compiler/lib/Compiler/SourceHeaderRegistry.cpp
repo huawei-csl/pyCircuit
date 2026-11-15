@@ -508,7 +508,7 @@ SourceHeaderRegistry::create(MLIRContext *context, ArrayRef<ModuleOp> headers,
   uint64_t constructorWork = 0;
   std::function<LogicalResult(func::FuncOp, unsigned)> visitConstructor =
       [&](func::FuncOp helper, unsigned depth) -> LogicalResult {
-    if (++constructorWork > 1024 * 1024 || depth > 128)
+    if (++constructorWork > 1024ull * 1024 * 1024 || depth > 128)
       return emitError() << "record constructor closure budget exceeded";
     unsigned mark = constructorMarks.lookup(helper);
     if (mark == 1)
@@ -518,7 +518,7 @@ SourceHeaderRegistry::create(MLIRContext *context, ArrayRef<ModuleOp> headers,
     constructorMarks[helper] = 1;
     unsigned height = 0;
     for (Operation &operation : helper.getBody().front()) {
-      if (++constructorWork > 1024 * 1024)
+      if (++constructorWork > 1024ull * 1024 * 1024)
         return emitError() << "record constructor closure budget exceeded";
       if (auto call = dyn_cast<func::CallOp>(operation)) {
         auto target = registry.lookupHelper(call.getCalleeAttr());

@@ -979,7 +979,7 @@ FailureOr<OwningOpRef<mlir::ModuleOp>> refineVerifiedAnchor(
   if (fingerprint.empty() || anchorSha256(fingerprint) != anchor.verifiedPackageSha256)
     return emitError() << "loaded anchor changed after native verification";
   ac::HardwareSourceCheckLimits limits;
-  if (ac::detail::findUnloweredTransaction((*anchor.package).getOperation())) limits.maxWorkUnits = 1024 * 1024;
+  if (ac::detail::findUnloweredTransaction((*anchor.package).getOperation())) limits.maxWorkUnits = 1024ull * 1024 * 1024;
   ac::detail::SourceCheckBudget budget(limits);
   auto candidate = acir::detail::materializeHardwareState(*anchor.package, budget);
   if (failed(candidate) || failed(acir::detail::verifyHardwareStateMaterialization(

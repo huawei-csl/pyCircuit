@@ -91,7 +91,7 @@ public:
       }
     }
     ac::HardwareSourceCheckLimits limits;
-    limits.maxWorkUnits = 1024 * 1024;
+    limits.maxWorkUnits = 1024ull * 1024 * 1024;
     ac::detail::SourceCheckBudget budget(limits);
     budget.setPhase("uninstantiated source templates");
     ac::HardwareAnalysis hardware(package);

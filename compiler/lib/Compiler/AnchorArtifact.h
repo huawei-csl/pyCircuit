@@ -9,13 +9,13 @@ namespace acir::compiler {
 // Format-owned transport caps, also enforced by the native direct APIs before
 // allocating payload buffers or invoking the MLIR fragment parser.
 struct AnchorFormatLimits {
-  static constexpr uint64_t manifestBytes = 4 * 1024 * 1024;
+  static constexpr uint64_t manifestBytes = 64ull * 1024 * 1024;
   static constexpr uint64_t payloadFiles = 4096;
   static constexpr uint64_t directories = 8192;
   static constexpr uint64_t depth = 32;
   static constexpr uint64_t pathBytes = 1024;
-  static constexpr uint64_t fileBytes = 16 * 1024 * 1024;
-  static constexpr uint64_t totalBytes = 64 * 1024 * 1024;
+  static constexpr uint64_t fileBytes = 1024ull * 1024 * 1024;
+  static constexpr uint64_t totalBytes = 4096ull * 1024 * 1024;
 };
 
 struct AnchorSourceProvenance {

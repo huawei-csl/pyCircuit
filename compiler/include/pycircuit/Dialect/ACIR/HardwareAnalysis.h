@@ -176,7 +176,7 @@ struct HardwareCheckCommitEndpoint {
   HardwareCheckCommitEndpointForm form = HardwareCheckCommitEndpointForm::Physical;
 };
 struct HardwareSourceCheckLimits {
-  uint64_t maxWorkUnits = 1024ull * 1024 * 1024;
+  uint64_t maxWorkUnits = 16ull * 1024 * 1024 * 1024;
 };
 struct HardwareSourceCheckPlan {
   HardwareResetSemantics resetSemantics = HardwareResetSemantics::Strict;
